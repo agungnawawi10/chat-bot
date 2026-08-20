@@ -171,3 +171,86 @@ func (r *ChatRepository) GetMessages(
 
 	return messages, nil
 }
+
+func (r *ChatRepository) GetConversations() (
+	[]model.ConversationResponse,
+	error,
+) {
+
+	query := `
+		SELECT id
+		FROM conversations
+		ORDER BY id DESC
+	`
+
+	rows, err := r.DB.Query(query)
+
+	if err != nil {
+		return nil, fmt.Errorf(
+			"failed to get conversations: %w",
+			err,
+		)
+	}
+
+	defer rows.Close()
+
+	var conversations []model.ConversationResponse
+
+	for rows.Next() {
+
+		var conversation model.ConversationResponse
+
+		err := rows.Scan(
+			&conversation.ID,
+		)
+
+		if err != nil {
+			return nil, fmt.Errorf(
+				"failed to scan conversation: %w",
+				err,
+			)
+		}
+
+		conversations = append(
+			conversations,
+			conversation,
+		)
+	}
+
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+
+	return conversations, nil
+}
+
+func (r *ChatRepository) GetConversation(
+	id string,
+) (*model.Conversation, error) {
+
+	query := `
+		SELECT id, created_at, updated_at
+		FROM conversations
+		WHERE id = ?
+	`
+
+	var conversation model.Conversation
+
+	err := r.DB.QueryRow(
+		query,
+		id,
+	).Scan(
+		&conversation.ID,
+		&conversation.CreatedAt,
+		&conversation.UpdatedAt,
+	)
+
+	if err != nil {
+		return nil, fmt.Errorf(
+			"failed to get conversation: %w",
+			err,
+		)
+	}
+
+	return &conversation, nil
+}

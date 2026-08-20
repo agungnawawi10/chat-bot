@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"strings"
 
 	"chat-bot/model"
 	"chat-bot/repository"
@@ -12,17 +13,33 @@ import (
 	"github.com/google/uuid"
 )
 
+// type ChatHandler struct {
+// 	GeminiService  *service.GeminiService
+// 	ChatRepository *repository.ChatRepository
+// }
+
 type ChatHandler struct {
-	GeminiService  *service.GeminiService
+	LLMService     service.LLMService
 	ChatRepository *repository.ChatRepository
 }
 
+// func NewChatHandler(
+// 	geminiService *service.GeminiService,
+// 	chatRepository *repository.ChatRepository,
+// ) *ChatHandler {
+// 	return &ChatHandler{
+// 		GeminiService:  geminiService,
+// 		ChatRepository: chatRepository,
+// 	}
+// }
+
 func NewChatHandler(
-	geminiService *service.GeminiService,
+	llmService service.LLMService,
 	chatRepository *repository.ChatRepository,
 ) *ChatHandler {
+
 	return &ChatHandler{
-		GeminiService:  geminiService,
+		LLMService:     llmService,
 		ChatRepository: chatRepository,
 	}
 }
@@ -151,7 +168,11 @@ func (h *ChatHandler) Chat(w http.ResponseWriter, r *http.Request) {
 
 	// 8. Kirim history ke Gemini
 
-	answer, err := h.GeminiService.GenerateResponse(
+	// answer, err := h.GeminiService.GenerateResponse(
+	// 	conversation,
+	// )
+
+	answer, err := h.LLMService.GenerateResponse(
 		conversation,
 	)
 
@@ -193,5 +214,216 @@ func (h *ChatHandler) Chat(w http.ResponseWriter, r *http.Request) {
 			ConversationID: request.ConversationID,
 			Answer:         answer,
 		},
+	)
+}
+
+func (h *ChatHandler) GetMessages(
+	w http.ResponseWriter,
+	r *http.Request,
+) {
+
+	if r.Method != http.MethodGet {
+		http.Error(
+			w,
+			"Method not allowed",
+			http.StatusMethodNotAllowed,
+		)
+		return
+	}
+
+	// Ambil ID dari URL
+	path := strings.TrimPrefix(
+		r.URL.Path,
+		"/conversations/",
+	)
+
+	// Contoh:
+	// abc-123/messages
+
+	parts := strings.Split(
+		path,
+		"/",
+	)
+
+	if len(parts) != 2 || parts[1] != "messages" {
+		http.Error(
+			w,
+			"Invalid URL",
+			http.StatusBadRequest,
+		)
+		return
+	}
+
+	conversationID := parts[0]
+
+	exists, err := h.ChatRepository.ConversationExists(
+		conversationID,
+	)
+
+	if err != nil {
+		http.Error(
+			w,
+			"Failed to check conversation",
+			http.StatusInternalServerError,
+		)
+		return
+	}
+
+	if !exists {
+		http.Error(
+			w,
+			"Conversation not found",
+			http.StatusNotFound,
+		)
+		return
+	}
+
+	messages, err := h.ChatRepository.GetMessages(
+		conversationID,
+	)
+
+	if err != nil {
+		http.Error(
+			w,
+			"Failed to get messages",
+			http.StatusInternalServerError,
+		)
+		return
+	}
+
+	w.Header().Set(
+		"Content-Type",
+		"application/json",
+	)
+
+	json.NewEncoder(w).Encode(
+		messages,
+	)
+}
+
+func (h *ChatHandler) ConversationRouter(
+	w http.ResponseWriter,
+	r *http.Request,
+) {
+
+	path := strings.TrimPrefix(
+		r.URL.Path,
+		"/conversations/",
+	)
+
+	parts := strings.Split(
+		strings.Trim(path, "/"),
+		"/",
+	)
+
+	if len(parts) == 1 {
+
+		h.GetConversation(w, r)
+
+		return
+	}
+
+	if len(parts) == 2 && parts[1] == "messages" {
+
+		h.GetMessages(w, r)
+
+		return
+	}
+
+	http.Error(
+		w,
+		"Invalid conversation endpoint",
+		http.StatusNotFound,
+	)
+}
+
+func (h *ChatHandler) GetConversations(
+	w http.ResponseWriter,
+	r *http.Request,
+) {
+
+	if r.Method != http.MethodGet {
+		http.Error(
+			w,
+			"Method not allowed",
+			http.StatusMethodNotAllowed,
+		)
+		return
+	}
+
+	conversations, err := h.ChatRepository.GetConversations()
+
+	if err != nil {
+		http.Error(
+			w,
+			"Failed to get conversations",
+			http.StatusInternalServerError,
+		)
+		return
+	}
+
+	w.Header().Set(
+		"Content-Type",
+		"application/json",
+	)
+
+	json.NewEncoder(w).Encode(
+		conversations,
+	)
+}
+
+func (h *ChatHandler) GetConversation(
+	w http.ResponseWriter,
+	r *http.Request,
+) {
+
+	if r.Method != http.MethodGet {
+		http.Error(
+			w,
+			"Method not allowed",
+			http.StatusMethodNotAllowed,
+		)
+		return
+	}
+
+	path := strings.TrimPrefix(
+		r.URL.Path,
+		"/conversations/",
+	)
+
+	conversationID := strings.TrimSuffix(
+		path,
+		"/",
+	)
+
+	if conversationID == "" {
+		http.Error(
+			w,
+			"Conversation ID is required",
+			http.StatusBadRequest,
+		)
+		return
+	}
+
+	conversation, err := h.ChatRepository.GetConversation(
+		conversationID,
+	)
+
+	if err != nil {
+		http.Error(
+			w,
+			"Conversation not found",
+			http.StatusNotFound,
+		)
+		return
+	}
+
+	w.Header().Set(
+		"Content-Type",
+		"application/json",
+	)
+
+	json.NewEncoder(w).Encode(
+		conversation,
 	)
 }

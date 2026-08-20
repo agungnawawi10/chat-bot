@@ -40,11 +40,18 @@ func main() {
 	chatRepository := repository.NewChatRepository(db)
 
 	// Buat Gemini service
-	geminiService := service.NewGeminiService()
+	// geminiService := service.NewGeminiService()
 
 	// Buat chat handler
+	// chatHandler := handler.NewChatHandler(
+	// 	geminiService,
+	// 	chatRepository,
+	// )
+
+	mockService := service.NewMockGeminiService()
+
 	chatHandler := handler.NewChatHandler(
-		geminiService,
+		mockService,
 		chatRepository,
 	)
 
@@ -52,6 +59,16 @@ func main() {
 	http.HandleFunc(
 		"/chat",
 		chatHandler.Chat,
+	)
+
+	http.HandleFunc(
+		"/conversations",
+		chatHandler.GetConversations,
+	)
+
+	http.HandleFunc(
+		"/conversations/",
+		chatHandler.ConversationRouter,
 	)
 
 	log.Println(
