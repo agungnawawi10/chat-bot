@@ -26,7 +26,15 @@ func (r *ChatRepository) CreateConversation(id string) error {
 
 	_, err := r.DB.Exec(query, id)
 
+	// untuk cek apakah ada id yang sama yang sudah tersimpan di database
 	if err != nil {
+		if sqliteErr, ok := err.(interface{ Code() int32 }); ok {
+			if sqliteErr.Code() == 19 {
+				return fmt.Errorf(
+					"conversation with ID %s already exists", id,
+				)
+			}
+		}
 		return fmt.Errorf(
 			"failed to create conversation: %w",
 			err,
