@@ -20,12 +20,16 @@ type ChatResponse struct {
 	Answer string `json:"answer"`
 }
 
+// Varialble history
+var conversation []GeminiContent
+
 // Request ke Gemini
 type GeminiRequest struct {
 	Contents []GeminiContent `json:"contents"`
 }
 
 type GeminiContent struct {
+	Role  string       `json:"role"`
 	Parts []GeminiPart `json:"parts"`
 }
 
@@ -70,18 +74,18 @@ func chatHandler(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "GEMINI_API_KEY not found", http.StatusInternalServerError)
 		return
 	}
+	conversation = append(conversation, GeminiContent{
+		Role: "user",
+		Parts: []GeminiPart{
+			{
+				Text: chatRequest.Message,
+			},
+		},
+	})
 
 	// Request yang akan dikirim ke Gemini
 	geminiRequest := GeminiRequest{
-		Contents: []GeminiContent{
-			{
-				Parts: []GeminiPart{
-					{
-						Text: chatRequest.Message,
-					},
-				},
-			},
-		},
+		Contents: conversation,
 	}
 
 	requestBody, err := json.Marshal(geminiRequest)
@@ -89,6 +93,7 @@ func chatHandler(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Failed to create request", http.StatusInternalServerError)
 		return
 	}
+	fmt.Println("Request Body:", string(requestBody))
 
 	// Endpoint Gemini
 	url := "https://generativelanguage.googleapis.com/v1beta/models/gemini-3.6-flash:generateContent?key=" + apiKey
@@ -153,6 +158,16 @@ func chatHandler(w http.ResponseWriter, r *http.Request) {
 
 		answer = geminiResponse.Candidates[0].Content.Parts[0].Text
 	}
+
+	// Simpan Jawaban Gemini ke conversation
+	conversation = append(conversation, GeminiContent{
+		Role: "model",
+		Parts: []GeminiPart{
+			{
+				Text: answer,
+			},
+		},
+	})
 
 	// Kirim jawaban ke user
 	w.Header().Set("Content-Type", "application/json")
