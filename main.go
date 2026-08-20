@@ -5,7 +5,9 @@ import (
 	"net/http"
 	"os"
 
+	"chat-bot/database"
 	"chat-bot/handler"
+	"chat-bot/repository"
 	"chat-bot/service"
 
 	"github.com/joho/godotenv"
@@ -29,12 +31,21 @@ func main() {
 
 	log.Println("API key berhasil dibaca")
 
+	// connect database
+	db := database.Connect()
+	defer db.Close()
+
+	database.Migrate(db)
+
+	chatRepository := repository.NewChatRepository(db)
+
 	// Buat Gemini service
 	geminiService := service.NewGeminiService()
 
 	// Buat chat handler
 	chatHandler := handler.NewChatHandler(
 		geminiService,
+		chatRepository,
 	)
 
 	// Register route
