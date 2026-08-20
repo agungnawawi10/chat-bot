@@ -1,15 +1,14 @@
 package model
 
 type ChatRequest struct {
-	Message string `json:"message"`
+	ConversationID string `json:"conversation_id"`
+	Message        string `json:"message"`
 }
 
 type ChatResponse struct {
-	Answer string `json:"answer"`
+	ConversationID string `json:"conversation_id"`
+	Answer         string `json:"answer"`
 }
-
-// Varialble history
-var conversation []GeminiContent
 
 // Request ke Gemini
 type GeminiRequest struct {

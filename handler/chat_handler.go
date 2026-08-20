@@ -2,21 +2,24 @@ package handler
 
 import (
 	"encoding/json"
+	"fmt"
 	"net/http"
 
 	"chat-bot/model"
 	"chat-bot/service"
+
+	"github.com/google/uuid"
 )
 
 type ChatHandler struct {
 	GeminiService *service.GeminiService
-	Conversation  []model.GeminiContent
+	Conversations map[string][]model.GeminiContent
 }
 
 func NewChatHandler(geminiService *service.GeminiService) *ChatHandler {
 	return &ChatHandler{
 		GeminiService: geminiService,
-		Conversation:  []model.GeminiContent{},
+		Conversations: make(map[string][]model.GeminiContent),
 	}
 }
 
@@ -34,6 +37,7 @@ func (h *ChatHandler) Chat(w http.ResponseWriter, r *http.Request) {
 	var request model.ChatRequest
 
 	err := json.NewDecoder(r.Body).Decode(&request)
+
 	if err != nil {
 		http.Error(
 			w,
@@ -52,9 +56,15 @@ func (h *ChatHandler) Chat(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Simpan pesan user
-	h.Conversation = append(
-		h.Conversation,
+	if request.ConversationID == "" {
+		request.ConversationID = uuid.New().String()
+	}
+	fmt.Println("Conversation ID:", request.ConversationID)
+
+	conversation := h.Conversations[request.ConversationID]
+
+	conversation = append(
+		conversation,
 		model.GeminiContent{
 			Role: "user",
 			Parts: []model.GeminiPart{
@@ -65,9 +75,8 @@ func (h *ChatHandler) Chat(w http.ResponseWriter, r *http.Request) {
 		},
 	)
 
-	// Kirim conversation ke Gemini
 	answer, err := h.GeminiService.GenerateResponse(
-		h.Conversation,
+		conversation,
 	)
 
 	if err != nil {
@@ -79,9 +88,8 @@ func (h *ChatHandler) Chat(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Simpan jawaban Gemini
-	h.Conversation = append(
-		h.Conversation,
+	conversation = append(
+		conversation,
 		model.GeminiContent{
 			Role: "model",
 			Parts: []model.GeminiPart{
@@ -92,12 +100,14 @@ func (h *ChatHandler) Chat(w http.ResponseWriter, r *http.Request) {
 		},
 	)
 
-	// Response ke user
+	h.Conversations[request.ConversationID] = conversation
+
 	w.Header().Set("Content-Type", "application/json")
 
 	json.NewEncoder(w).Encode(
 		model.ChatResponse{
-			Answer: answer,
+			ConversationID: request.ConversationID,
+			Answer:         answer,
 		},
 	)
 }
