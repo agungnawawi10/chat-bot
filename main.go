@@ -1,12 +1,14 @@
 package main
 
 import (
+	"fmt"
 	"log"
 	"net/http"
 	"os"
 
 	"chat-bot/database"
 	"chat-bot/handler"
+	"chat-bot/rag"
 	"chat-bot/repository"
 	"chat-bot/service"
 
@@ -48,12 +50,42 @@ func main() {
 	// 	chatRepository,
 	// )
 
+	// Untuk testing pakai mock Gemini
 	mockService := service.NewMockGeminiService()
 
 	chatHandler := handler.NewChatHandler(
 		mockService,
 		chatRepository,
 	)
+
+	// Untuk Load Document
+	document, err := rag.LoadDocument(
+		"documents/company.txt",
+	)
+
+	if err != nil {
+		log.Fatal(
+			"Failed to load document:",
+			err,
+		)
+	}
+
+	chunks := rag.ChunkText(
+		document,
+		100,
+		20,
+	)
+
+	fmt.Println("Total chunks:", len(chunks))
+
+	for i, chunk := range chunks {
+
+		fmt.Printf(
+			"\n--- CHUNK %d ---\n%s\n",
+			i+1,
+			chunk,
+		)
+	}
 
 	// Register route
 	http.HandleFunc(
