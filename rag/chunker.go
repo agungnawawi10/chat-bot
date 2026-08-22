@@ -1,6 +1,8 @@
 package rag
 
-import "strings"
+import (
+	"strings"
+)
 
 func ChunkText(
 	text string,
@@ -34,14 +36,15 @@ func ChunkText(
 			end = len(text)
 		} else {
 
-			// Cari spasi terakhir sebelum batas chunk.
-			splitPos := strings.LastIndexAny(
-				text[start:end],
-				" \t\n",
+			splitPos := findOptimalSplitPoint(
+				text,
+				start,
+				end,
+				chunkSize,
 			)
 
 			if splitPos != -1 {
-				end = start + splitPos
+				end = splitPos
 			}
 		}
 
@@ -60,7 +63,6 @@ func ChunkText(
 			break
 		}
 
-		// Mundur untuk membuat overlap.
 		nextStart := end - overlap
 
 		if nextStart <= start {
@@ -71,4 +73,50 @@ func ChunkText(
 	}
 
 	return chunks
+}
+
+func findOptimalSplitPoint(
+	text string,
+	start int,
+	end int,
+	chunkSize int,
+) int {
+
+	if end >= len(text) {
+		return len(text)
+	}
+
+	for end < len(text) {
+		if text[end] == ' ' || text[end] == '\t' || text[end] == '\n' {
+			break
+		}
+		end++
+		if end-start > chunkSize*2 {
+			break
+		}
+	}
+
+	if end >= len(text) {
+		return len(text)
+	}
+
+	lastPeriod := strings.LastIndex(
+		text[start:end],
+		".",
+	)
+
+	if lastPeriod > chunkSize/2 {
+		return start + lastPeriod + 1
+	}
+
+	lastSpace := strings.LastIndexAny(
+		text[start:end],
+		" \t\n",
+	)
+
+	if lastSpace > chunkSize/2 {
+		return start + lastSpace + 1
+	}
+
+	return end
 }
