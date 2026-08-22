@@ -67,6 +67,11 @@ func ChunkText(
 
 		if nextStart <= start {
 			nextStart = end
+		} else {
+			nextStart = findOverlapStart(
+				text,
+				nextStart,
+			)
 		}
 
 		start = nextStart
@@ -87,10 +92,14 @@ func findOptimalSplitPoint(
 	}
 
 	for end < len(text) {
-		if text[end] == ' ' || text[end] == '\t' || text[end] == '\n' {
+		if text[end] == ' ' ||
+			text[end] == '\t' ||
+			text[end] == '\n' {
 			break
 		}
+
 		end++
+
 		if end-start > chunkSize*2 {
 			break
 		}
@@ -119,4 +128,31 @@ func findOptimalSplitPoint(
 	}
 
 	return end
+}
+
+func findOverlapStart(
+	text string,
+	position int,
+) int {
+
+	if position <= 0 {
+		return 0
+	}
+
+	if position >= len(text) {
+		return len(text)
+	}
+
+	for position > 0 {
+		if text[position-1] == ' ' ||
+			text[position-1] == '\t' ||
+			text[position-1] == '\n' {
+
+			break
+		}
+
+		position--
+	}
+
+	return position
 }
