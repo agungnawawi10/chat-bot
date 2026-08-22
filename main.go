@@ -70,6 +70,7 @@ func main() {
 		)
 	}
 
+	// untuk chunking
 	chunks := rag.ChunkText(
 		document,
 		100,
@@ -84,6 +85,40 @@ func main() {
 			"\n--- CHUNK %d ---\n%s\n",
 			i+1,
 			chunk,
+		)
+	}
+
+	// untuk embedding
+
+	embeddingService := service.NewEmbeddingService()
+
+	for i, chunk := range chunks {
+
+		fmt.Printf(
+			"\n--- CHUNK %d ---\n%s\n",
+			i+1,
+			chunk,
+		)
+
+		vector, err := embeddingService.GenerateEmbedding(
+			chunk,
+		)
+
+		if err != nil {
+			log.Fatal(
+				"Failed to generate embedding:",
+				err,
+			)
+		}
+
+		fmt.Println(
+			"Vector dimension:",
+			len(vector),
+		)
+
+		fmt.Println(
+			"First 5 values:",
+			vector[:5],
 		)
 	}
 
