@@ -42,21 +42,21 @@ func main() {
 	chatRepository := repository.NewChatRepository(db)
 
 	// Buat Gemini service
-	// geminiService := service.NewGeminiService()
+	geminiService := service.NewGeminiService()
 
 	// Buat chat handler
-	// chatHandler := handler.NewChatHandler(
-	// 	geminiService,
-	// 	chatRepository,
-	// )
-
-	// Untuk testing pakai mock Gemini
-	mockService := service.NewMockGeminiService()
-
 	chatHandler := handler.NewChatHandler(
-		mockService,
+		geminiService,
 		chatRepository,
 	)
+
+	// Untuk testing pakai mock Gemini
+	// mockService := service.NewMockGeminiService()
+
+	// chatHandler := handler.NewChatHandler(
+	// 	mockService,
+	// 	chatRepository,
+	// )
 
 	// Untuk Load Document
 	document, err := rag.LoadDocument(
