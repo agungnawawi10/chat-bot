@@ -28,7 +28,7 @@ type EmbeddingPart struct {
 
 type EmbeddingResponse struct {
 	Embedding struct {
-		Values []float64 `json:"values"`
+		Values []float32 `json:"values"`
 	} `json:"embedding"`
 }
 
@@ -40,7 +40,7 @@ func NewEmbeddingService() *EmbeddingService {
 
 func (s *EmbeddingService) GenerateEmbedding(
 	text string,
-) ([]float64, error) {
+) ([]float32, error) {
 
 	requestData := EmbeddingRequest{
 		Model: "models/gemini-embedding-001",

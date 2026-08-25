@@ -20,6 +20,7 @@ import (
 
 type ChatHandler struct {
 	LLMService     service.LLMService
+	RAGService     *service.RAGService
 	ChatRepository *repository.ChatRepository
 }
 
@@ -35,11 +36,13 @@ type ChatHandler struct {
 
 func NewChatHandler(
 	llmService service.LLMService,
+	ragService *service.RAGService,
 	chatRepository *repository.ChatRepository,
 ) *ChatHandler {
 
 	return &ChatHandler{
 		LLMService:     llmService,
+		RAGService:     ragService,
 		ChatRepository: chatRepository,
 	}
 }

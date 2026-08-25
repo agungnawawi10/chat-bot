@@ -1,10 +1,11 @@
 package main
 
 import (
-	"fmt"
+	"context"
 	"log"
 	"net/http"
 	"os"
+	"fmt"
 
 	"chat-bot/database"
 	"chat-bot/handler"
@@ -17,14 +18,20 @@ import (
 
 func main() {
 
-	// Load .env
+	// ========================================
+	// 1. Load .env
+	// ========================================
+
 	err := godotenv.Load()
 
 	if err != nil {
 		log.Fatal("Error loading .env file")
 	}
 
-	// Cek API key
+	// ========================================
+	// 2. Cek API key
+	// ========================================
+
 	apiKey := os.Getenv("GEMINI_API_KEY")
 
 	if apiKey == "" {
@@ -33,7 +40,10 @@ func main() {
 
 	log.Println("API key berhasil dibaca")
 
-	// connect database
+	// ========================================
+	// 3. Connect database
+	// ========================================
+
 	db := database.Connect()
 	defer db.Close()
 
@@ -41,24 +51,18 @@ func main() {
 
 	chatRepository := repository.NewChatRepository(db)
 
-	// Buat Gemini service
+	// ========================================
+	// 4. Buat services
+	// ========================================
+
 	geminiService := service.NewGeminiService()
 
-	// Buat chat handler
-	chatHandler := handler.NewChatHandler(
-		geminiService,
-		chatRepository,
-	)
+	embeddingService := service.NewEmbeddingService()
 
-	// Untuk testing pakai mock Gemini
-	// mockService := service.NewMockGeminiService()
+	// ========================================
+	// 5. Load document
+	// ========================================
 
-	// chatHandler := handler.NewChatHandler(
-	// 	mockService,
-	// 	chatRepository,
-	// )
-
-	// Untuk Load Document
 	document, err := rag.LoadDocument(
 		"documents/company.txt",
 	)
@@ -70,59 +74,109 @@ func main() {
 		)
 	}
 
-	// untuk chunking
+	// ========================================
+	// 6. Chunking
+	// ========================================
+
 	chunks := rag.ChunkText(
 		document,
 		100,
 		20,
 	)
 
-	fmt.Println("Total chunks:", len(chunks))
+	log.Printf(
+		"Total chunks: %d",
+		len(chunks),
+	)
 
-	for i, chunk := range chunks {
+	// ========================================
+	// 7. Connect Qdrant
+	// ========================================
 
-		fmt.Printf(
-			"\n--- CHUNK %d ---\n%s\n",
-			i+1,
-			chunk,
+	vectorRepository, err := repository.NewVectorRepository()
+
+	if err != nil {
+		log.Fatal(
+			"Failed to connect to Qdrant:",
+			err,
 		)
 	}
 
-	// untuk embedding
+	// ========================================
+	// 8. Index document ke Qdrant
+	// ========================================
 
-	embeddingService := service.NewEmbeddingService()
+	ctx := context.Background()
 
 	for i, chunk := range chunks {
 
-		fmt.Printf(
-			"\n--- CHUNK %d ---\n%s\n",
+		log.Printf(
+			"Processing chunk %d/%d...",
 			i+1,
-			chunk,
+			len(chunks),
 		)
 
-		vector, err := embeddingService.GenerateEmbedding(
+		// Generate embedding
+		embedding, err := embeddingService.GenerateEmbedding(
 			chunk,
 		)
 
 		if err != nil {
-			log.Fatal(
-				"Failed to generate embedding:",
+			log.Fatalf(
+				"Failed to generate embedding for chunk %d: %v",
+				i+1,
 				err,
 			)
 		}
 
-		fmt.Println(
-			"Vector dimension:",
-			len(vector),
+		// Simpan ke Qdrant
+		err = vectorRepository.SaveChunk(
+			ctx,
+			fmt.Sprintf("chunk-%d", i+1),
+			chunk,
+			embedding,
+			"company.txt",
+			i,
 		)
 
-		fmt.Println(
-			"First 5 values:",
-			vector[:5],
+		if err != nil {
+			log.Fatalf(
+				"Failed to save chunk %d: %v",
+				i+1,
+				err,
+			)
+		}
+
+		log.Printf(
+			"Chunk %d berhasil disimpan ke Qdrant",
+			i+1,
 		)
 	}
 
-	// Register route
+	// ========================================
+	// 9. Buat RAG Service
+	// ========================================
+
+	ragService := service.NewRAGService(
+		embeddingService,
+		vectorRepository,
+		geminiService,
+	)
+
+	// ========================================
+	// 10. Buat Chat Handler
+	// ========================================
+
+	chatHandler := handler.NewChatHandler(
+		geminiService,
+		ragService,
+		chatRepository,
+	)
+
+	// ========================================
+	// 11. Register routes
+	// ========================================
+
 	http.HandleFunc(
 		"/chat",
 		chatHandler.Chat,
@@ -138,11 +192,18 @@ func main() {
 		chatHandler.ConversationRouter,
 	)
 
+	// ========================================
+	// 12. Start server
+	// ========================================
+
 	log.Println(
 		"Server running on http://localhost:8080",
 	)
 
 	log.Fatal(
-		http.ListenAndServe(":8080", nil),
+		http.ListenAndServe(
+			":8080",
+			nil,
+		),
 	)
 }
