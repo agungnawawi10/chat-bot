@@ -10,20 +10,20 @@ import (
 )
 
 type RAGService struct {
-	EmbeddingService *EmbeddingService
-	VectorRepository *repository.VectorRepository
-	GeminiService    *GeminiService
+	EmbeddingService  *EmbeddingService
+	VectorRepository  repository.VectorRepositoryInterface
+	GeminiService     *GeminiService
 }
 
 func NewRAGService(
 	embeddingService *EmbeddingService,
-	vectorRepository *repository.VectorRepository,
+	vectorRepository repository.VectorRepositoryInterface,
 	geminiService *GeminiService,
 ) *RAGService {
 	return &RAGService{
-		EmbeddingService: embeddingService,
-		VectorRepository: vectorRepository,
-		GeminiService:    geminiService,
+		EmbeddingService:  embeddingService,
+		VectorRepository:  vectorRepository,
+		GeminiService:     geminiService,
 	}
 }
 

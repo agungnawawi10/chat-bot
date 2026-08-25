@@ -1,6 +1,7 @@
 package handler
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"net/http"
@@ -21,23 +22,13 @@ import (
 type ChatHandler struct {
 	LLMService     service.LLMService
 	RAGService     *service.RAGService
-	ChatRepository *repository.ChatRepository
+	ChatRepository repository.ChatRepositoryInterface
 }
-
-// func NewChatHandler(
-// 	geminiService *service.GeminiService,
-// 	chatRepository *repository.ChatRepository,
-// ) *ChatHandler {
-// 	return &ChatHandler{
-// 		GeminiService:  geminiService,
-// 		ChatRepository: chatRepository,
-// 	}
-// }
 
 func NewChatHandler(
 	llmService service.LLMService,
 	ragService *service.RAGService,
-	chatRepository *repository.ChatRepository,
+	chatRepository repository.ChatRepositoryInterface,
 ) *ChatHandler {
 
 	return &ChatHandler{
@@ -92,7 +83,9 @@ func (h *ChatHandler) Chat(w http.ResponseWriter, r *http.Request) {
 
 		request.ConversationID = uuid.New().String()
 
+		ctx := context.Background()
 		err := h.ChatRepository.CreateConversation(
+			ctx,
 			request.ConversationID,
 		)
 
@@ -114,7 +107,9 @@ func (h *ChatHandler) Chat(w http.ResponseWriter, r *http.Request) {
 
 		// 5. Kalau ID sudah diberikan, cek database
 
+		ctx := context.Background()
 		exists, err := h.ChatRepository.ConversationExists(
+			ctx,
 			request.ConversationID,
 		)
 
@@ -137,9 +132,12 @@ func (h *ChatHandler) Chat(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
+	ctx := context.Background()
+
 	// 6. Simpan pesan user ke database
 
 	err = h.ChatRepository.SaveMessage(
+		ctx,
 		request.ConversationID,
 		"user",
 		request.Message,
@@ -157,6 +155,7 @@ func (h *ChatHandler) Chat(w http.ResponseWriter, r *http.Request) {
 	// 7. Ambil history conversation
 
 	conversation, err := h.ChatRepository.GetMessages(
+		ctx,
 		request.ConversationID,
 	)
 
@@ -190,20 +189,35 @@ func (h *ChatHandler) Chat(w http.ResponseWriter, r *http.Request) {
 
 	// 9. Simpan jawaban Gemini
 
-	err = h.ChatRepository.SaveMessage(
-		request.ConversationID,
-		"model",
-		answer,
-	)
-
-	if err != nil {
-		http.Error(
-			w,
-			"Failed to save model message",
-			http.StatusInternalServerError,
+		err = h.ChatRepository.SaveMessage(
+			ctx,
+			request.ConversationID,
+			"model",
+			answer,
 		)
-		return
-	}
+
+		if err != nil {
+			http.Error(
+				w,
+				"Failed to save model message",
+				http.StatusInternalServerError,
+			)
+			return
+		}
+
+		err = h.ChatRepository.UpdateConversationTimestamp(
+			ctx,
+			request.ConversationID,
+		)
+
+		if err != nil {
+			http.Error(
+				w,
+				"Failed to update conversation timestamp",
+				http.StatusInternalServerError,
+			)
+			return
+		}
 
 	// 10. Response ke client
 
@@ -234,14 +248,10 @@ func (h *ChatHandler) GetMessages(
 		return
 	}
 
-	// Ambil ID dari URL
 	path := strings.TrimPrefix(
 		r.URL.Path,
 		"/conversations/",
 	)
-
-	// Contoh:
-	// abc-123/messages
 
 	parts := strings.Split(
 		path,
@@ -259,7 +269,10 @@ func (h *ChatHandler) GetMessages(
 
 	conversationID := parts[0]
 
+	ctx := context.Background()
+
 	exists, err := h.ChatRepository.ConversationExists(
+		ctx,
 		conversationID,
 	)
 
@@ -282,6 +295,7 @@ func (h *ChatHandler) GetMessages(
 	}
 
 	messages, err := h.ChatRepository.GetMessages(
+		ctx,
 		conversationID,
 	)
 
@@ -354,7 +368,8 @@ func (h *ChatHandler) GetConversations(
 		return
 	}
 
-	conversations, err := h.ChatRepository.GetConversations()
+	ctx := context.Background()
+	conversations, err := h.ChatRepository.GetConversations(ctx)
 
 	if err != nil {
 		http.Error(
@@ -408,7 +423,9 @@ func (h *ChatHandler) GetConversation(
 		return
 	}
 
+	ctx := context.Background()
 	conversation, err := h.ChatRepository.GetConversation(
+		ctx,
 		conversationID,
 	)
 

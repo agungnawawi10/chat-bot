@@ -18,9 +18,7 @@ import (
 
 func main() {
 
-	// ========================================
 	// 1. Load .env
-	// ========================================
 
 	err := godotenv.Load()
 
@@ -28,9 +26,7 @@ func main() {
 		log.Fatal("Error loading .env file")
 	}
 
-	// ========================================
 	// 2. Cek API key
-	// ========================================
 
 	apiKey := os.Getenv("GEMINI_API_KEY")
 
@@ -40,9 +36,7 @@ func main() {
 
 	log.Println("API key berhasil dibaca")
 
-	// ========================================
 	// 3. Connect database
-	// ========================================
 
 	db := database.Connect()
 	defer db.Close()
@@ -51,17 +45,28 @@ func main() {
 
 	chatRepository := repository.NewChatRepository(db)
 
-	// ========================================
+	vectorRepositoryConfig := &repository.VectorRepositoryConfig{
+		Host:     "localhost",
+		Port:     6334,
+		Collection: "documents",
+	}
+
+	vectorRepository, err := repository.NewVectorRepository(vectorRepositoryConfig)
+
+	if err != nil {
+		log.Fatal(
+			"Failed to connect to Qdrant:",
+			err,
+		)
+	}
+
 	// 4. Buat services
-	// ========================================
 
 	geminiService := service.NewGeminiService()
 
 	embeddingService := service.NewEmbeddingService()
 
-	// ========================================
 	// 5. Load document
-	// ========================================
 
 	document, err := rag.LoadDocument(
 		"documents/company.txt",
@@ -74,9 +79,7 @@ func main() {
 		)
 	}
 
-	// ========================================
 	// 6. Chunking
-	// ========================================
 
 	chunks := rag.ChunkText(
 		document,
@@ -89,22 +92,9 @@ func main() {
 		len(chunks),
 	)
 
-	// ========================================
-	// 7. Connect Qdrant
-	// ========================================
 
-	vectorRepository, err := repository.NewVectorRepository()
 
-	if err != nil {
-		log.Fatal(
-			"Failed to connect to Qdrant:",
-			err,
-		)
-	}
-
-	// ========================================
 	// 8. Index document ke Qdrant
-	// ========================================
 
 	ctx := context.Background()
 
@@ -153,9 +143,7 @@ func main() {
 		)
 	}
 
-	// ========================================
 	// 9. Buat RAG Service
-	// ========================================
 
 	ragService := service.NewRAGService(
 		embeddingService,
@@ -163,9 +151,7 @@ func main() {
 		geminiService,
 	)
 
-	// ========================================
 	// 10. Buat Chat Handler
-	// ========================================
 
 	chatHandler := handler.NewChatHandler(
 		geminiService,
@@ -173,9 +159,7 @@ func main() {
 		chatRepository,
 	)
 
-	// ========================================
 	// 11. Register routes
-	// ========================================
 
 	http.HandleFunc(
 		"/chat",
@@ -191,10 +175,7 @@ func main() {
 		"/conversations/",
 		chatHandler.ConversationRouter,
 	)
-
-	// ========================================
 	// 12. Start server
-	// ========================================
 
 	log.Println(
 		"Server running on http://localhost:8080",

@@ -10,13 +10,27 @@ import (
 type VectorRepository struct {
 	Client     *qdrant.Client
 	Collection string
+	Config     *VectorRepositoryConfig
 }
 
-func NewVectorRepository() (*VectorRepository, error) {
+type VectorRepositoryConfig struct {
+	Host     string
+	Port     int
+	Collection string
+}
+
+func NewVectorRepository(config *VectorRepositoryConfig) (*VectorRepository, error) {
+	if config == nil {
+		config = &VectorRepositoryConfig{
+			Host:     "localhost",
+			Port:     6334,
+			Collection: "documents",
+		}
+	}
 
 	client, err := qdrant.NewClient(&qdrant.Config{
-		Host: "localhost",
-		Port: 6334,
+		Host: config.Host,
+		Port: config.Port,
 	})
 
 	if err != nil {
@@ -25,7 +39,8 @@ func NewVectorRepository() (*VectorRepository, error) {
 
 	return &VectorRepository{
 		Client:     client,
-		Collection: "documents",
+		Collection: config.Collection,
+		Config:     config,
 	}, nil
 }
 

@@ -1,8 +1,10 @@
 package repository
 
 import (
+	"context"
 	"database/sql"
 	"fmt"
+	"time"
 
 	"chat-bot/model"
 )
@@ -17,16 +19,18 @@ func NewChatRepository(db *sql.DB) *ChatRepository {
 	}
 }
 
-func (r *ChatRepository) CreateConversation(id string) error {
+func (r *ChatRepository) CreateConversation(
+	ctx context.Context,
+	id string,
+) error {
 
 	query := `
 		INSERT INTO conversations (id)
 		VALUES (?)
 	`
 
-	_, err := r.DB.Exec(query, id)
+	_, err := r.DB.ExecContext(ctx, query, id)
 
-	// untuk cek apakah ada id yang sama yang sudah tersimpan di database
 	if err != nil {
 		if sqliteErr, ok := err.(interface{ Code() int32 }); ok {
 			if sqliteErr.Code() == 19 {
@@ -45,6 +49,7 @@ func (r *ChatRepository) CreateConversation(id string) error {
 }
 
 func (r *ChatRepository) ConversationExists(
+	ctx context.Context,
 	id string,
 ) (bool, error) {
 
@@ -58,10 +63,7 @@ func (r *ChatRepository) ConversationExists(
 
 	var exists bool
 
-	err := r.DB.QueryRow(
-		query,
-		id,
-	).Scan(&exists)
+	err := r.DB.QueryRowContext(ctx, query, id).Scan(&exists)
 
 	if err != nil {
 		return false, fmt.Errorf(
@@ -74,6 +76,7 @@ func (r *ChatRepository) ConversationExists(
 }
 
 func (r *ChatRepository) SaveMessage(
+	ctx context.Context,
 	conversationID string,
 	role string,
 	content string,
@@ -88,12 +91,7 @@ func (r *ChatRepository) SaveMessage(
 		VALUES (?, ?, ?)
 	`
 
-	_, err := r.DB.Exec(
-		query,
-		conversationID,
-		role,
-		content,
-	)
+	_, err := r.DB.ExecContext(ctx, query, conversationID, role, content)
 
 	if err != nil {
 		return fmt.Errorf(
@@ -106,6 +104,7 @@ func (r *ChatRepository) SaveMessage(
 }
 
 func (r *ChatRepository) GetMessages(
+	ctx context.Context,
 	conversationID string,
 ) ([]model.GeminiContent, error) {
 
@@ -116,10 +115,7 @@ func (r *ChatRepository) GetMessages(
 		ORDER BY id ASC
 	`
 
-	rows, err := r.DB.Query(
-		query,
-		conversationID,
-	)
+	rows, err := r.DB.QueryContext(ctx, query, conversationID)
 
 	if err != nil {
 		return nil, fmt.Errorf(
@@ -172,10 +168,9 @@ func (r *ChatRepository) GetMessages(
 	return messages, nil
 }
 
-func (r *ChatRepository) GetConversations() (
-	[]model.ConversationResponse,
-	error,
-) {
+func (r *ChatRepository) GetConversations(
+	ctx context.Context,
+) ([]model.ConversationResponse, error) {
 
 	query := `
 		SELECT id
@@ -183,7 +178,7 @@ func (r *ChatRepository) GetConversations() (
 		ORDER BY id DESC
 	`
 
-	rows, err := r.DB.Query(query)
+	rows, err := r.DB.QueryContext(ctx, query)
 
 	if err != nil {
 		return nil, fmt.Errorf(
@@ -225,6 +220,7 @@ func (r *ChatRepository) GetConversations() (
 }
 
 func (r *ChatRepository) GetConversation(
+	ctx context.Context,
 	id string,
 ) (*model.Conversation, error) {
 
@@ -236,10 +232,7 @@ func (r *ChatRepository) GetConversation(
 
 	var conversation model.Conversation
 
-	err := r.DB.QueryRow(
-		query,
-		id,
-	).Scan(
+	err := r.DB.QueryRowContext(ctx, query, id).Scan(
 		&conversation.ID,
 		&conversation.CreatedAt,
 		&conversation.UpdatedAt,
@@ -253,4 +246,32 @@ func (r *ChatRepository) GetConversation(
 	}
 
 	return &conversation, nil
+}
+
+func (r *ChatRepository) UpdateConversationTimestamp(
+	ctx context.Context,
+	id string,
+) error {
+
+	query := `
+		UPDATE conversations
+		SET updated_at = ?
+		WHERE id = ?
+	`
+
+	_, err := r.DB.ExecContext(
+		ctx,
+		query,
+		time.Now(),
+		id,
+	)
+
+	if err != nil {
+		return fmt.Errorf(
+			"failed to update conversation timestamp: %w",
+			err,
+		)
+	}
+
+	return nil
 }
