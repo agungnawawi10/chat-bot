@@ -1,4 +1,4 @@
-# Chat Bot RAG
+# Chat Bot AI
 
 Chatbot berbasis Golang dengan Gemini API, PostgreSQL, dan Qdrant sebagai vector database.
 
@@ -38,7 +38,7 @@ go mod tidy
 CREATE DATABASE chatbot;
 ```
 
-### Setup Qdrant
+### Setup Qdrant Vektor Database
 
 ```bash 
 docker run -d --name qdrant -p 6333:6333 -p 6334:6334 qdrant/qdrant
