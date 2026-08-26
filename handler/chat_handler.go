@@ -154,19 +154,19 @@ func (h *ChatHandler) Chat(w http.ResponseWriter, r *http.Request) {
 
 	// 7. Ambil history conversation
 
-	conversation, err := h.ChatRepository.GetMessages(
-		ctx,
-		request.ConversationID,
-	)
+	// conversation, err := h.ChatRepository.GetMessages(
+	// 	ctx,
+	// 	request.ConversationID,
+	// )
 
-	if err != nil {
-		http.Error(
-			w,
-			"Failed to get conversation messages",
-			http.StatusInternalServerError,
-		)
-		return
-	}
+	// if err != nil {
+	// 	http.Error(
+	// 		w,
+	// 		"Failed to get conversation messages",
+	// 		http.StatusInternalServerError,
+	// 	)
+	// 	return
+	// }
 
 	// 8. Kirim history ke Gemini
 
@@ -174,8 +174,24 @@ func (h *ChatHandler) Chat(w http.ResponseWriter, r *http.Request) {
 	// 	conversation,
 	// )
 
-	answer, err := h.LLMService.GenerateResponse(
-		conversation,
+	// answer, err := h.LLMService.GenerateResponse(
+	// 	conversation,
+	// )
+
+	// if err != nil {
+	// 	http.Error(
+	// 		w,
+	// 		"Failed to generate response: "+err.Error(),
+	// 		http.StatusInternalServerError,
+	// 	)
+	// 	return
+	// }
+
+	// 8. Generate answer menggunakan RAG
+
+	answer, err := h.RAGService.GenerateAnswer(
+		ctx,
+		request.Message,
 	)
 
 	if err != nil {
@@ -186,38 +202,37 @@ func (h *ChatHandler) Chat(w http.ResponseWriter, r *http.Request) {
 		)
 		return
 	}
-
 	// 9. Simpan jawaban Gemini
 
-		err = h.ChatRepository.SaveMessage(
-			ctx,
-			request.ConversationID,
-			"model",
-			answer,
+	err = h.ChatRepository.SaveMessage(
+		ctx,
+		request.ConversationID,
+		"model",
+		answer,
+	)
+
+	if err != nil {
+		http.Error(
+			w,
+			"Failed to save model message",
+			http.StatusInternalServerError,
 		)
+		return
+	}
 
-		if err != nil {
-			http.Error(
-				w,
-				"Failed to save model message",
-				http.StatusInternalServerError,
-			)
-			return
-		}
+	err = h.ChatRepository.UpdateConversationTimestamp(
+		ctx,
+		request.ConversationID,
+	)
 
-		err = h.ChatRepository.UpdateConversationTimestamp(
-			ctx,
-			request.ConversationID,
+	if err != nil {
+		http.Error(
+			w,
+			"Failed to update conversation timestamp",
+			http.StatusInternalServerError,
 		)
-
-		if err != nil {
-			http.Error(
-				w,
-				"Failed to update conversation timestamp",
-				http.StatusInternalServerError,
-			)
-			return
-		}
+		return
+	}
 
 	// 10. Response ke client
 
