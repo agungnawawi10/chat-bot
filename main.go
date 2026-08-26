@@ -2,10 +2,11 @@ package main
 
 import (
 	"context"
+	"fmt"
 	"log"
 	"net/http"
-	"os"
-	"fmt"
+	// "os"
+	// "fmt"
 
 	"chat-bot/database"
 	"chat-bot/handler"
@@ -26,15 +27,16 @@ func main() {
 		log.Fatal("Error loading .env file")
 	}
 
-	// 2. Cek API key
 
-	apiKey := os.Getenv("GEMINI_API_KEY")
+// 2. Cek API key
 
-	if apiKey == "" {
-		log.Fatal("GEMINI_API_KEY tidak ditemukan")
-	}
+	// apiKey := os.Getenv("GEMINI_API_KEY")
 
-	log.Println("API key berhasil dibaca")
+	// if apiKey == "" {
+	// 	log.Fatal("GEMINI_API_KEY tidak ditemukan")
+	// }
+
+	// log.Println("API key berhasil dibaca")
 
 	// 3. Connect database
 
@@ -46,8 +48,8 @@ func main() {
 	chatRepository := repository.NewChatRepository(db)
 
 	vectorRepositoryConfig := &repository.VectorRepositoryConfig{
-		Host:     "localhost",
-		Port:     6334,
+		Host:       "localhost",
+		Port:       6334,
 		Collection: "documents",
 	}
 
@@ -62,14 +64,17 @@ func main() {
 
 	// 4. Buat services
 
-	geminiService := service.NewGeminiService()
+	geminiService := service.NewMockGeminiService()
+
+	// geminiService := service.NewGeminiService()
 
 	embeddingService := service.NewEmbeddingService()
 
 	// 5. Load document
 
 	document, err := rag.LoadDocument(
-		"documents/company.txt",
+		// "documents/company.txt",
+		"documents/profile_agung.txt",
 	)
 
 	if err != nil {
@@ -91,8 +96,6 @@ func main() {
 		"Total chunks: %d",
 		len(chunks),
 	)
-
-
 
 	// 8. Index document ke Qdrant
 
@@ -124,10 +127,10 @@ func main() {
 			ctx,
 			fmt.Sprintf("chunk-%d", i+1),
 			chunk,
-			embedding,
-			"company.txt",
-			i,
-		)
+		embedding,
+		"profile_agung.txt",
+		i,
+	)
 
 		if err != nil {
 			log.Fatalf(
