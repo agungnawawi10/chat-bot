@@ -2,7 +2,7 @@ package main
 
 import (
 	"context"
-	"fmt"
+	// "fmt"
 	"log"
 	"net/http"
 	// "os"
@@ -27,8 +27,7 @@ func main() {
 		log.Fatal("Error loading .env file")
 	}
 
-
-// 2. Cek API key
+	// 2. Cek API key
 
 	// apiKey := os.Getenv("GEMINI_API_KEY")
 
@@ -70,80 +69,32 @@ func main() {
 
 	embeddingService := service.NewEmbeddingService()
 
-	// 5. Load document
-
-	document, err := rag.LoadDocument(
-		// "documents/company.txt",
-		"documents/profile_agung.txt",
-	)
-
-	if err != nil {
-		log.Fatal(
-			"Failed to load document:",
-			err,
-		)
-	}
-
-	// 6. Chunking
-
-	chunks := rag.ChunkText(
-		document,
-		100,
-		20,
-	)
-
-	log.Printf(
-		"Total chunks: %d",
-		len(chunks),
-	)
-
-	// 8. Index document ke Qdrant
+	// Load Document
 
 	ctx := context.Background()
 
-	for i, chunk := range chunks {
-
-		log.Printf(
-			"Processing chunk %d/%d...",
-			i+1,
-			len(chunks),
-		)
-
-		// Generate embedding
-		embedding, err := embeddingService.GenerateEmbedding(
-			chunk,
-		)
-
-		if err != nil {
-			log.Fatalf(
-				"Failed to generate embedding for chunk %d: %v",
-				i+1,
-				err,
-			)
-		}
-
-		// Simpan ke Qdrant
-		err = vectorRepository.SaveChunk(
-			ctx,
-			fmt.Sprintf("chunk-%d", i+1),
-			chunk,
-		embedding,
-		"profile_agung.txt",
-		i,
+	err = rag.IndexDocument(
+		ctx,
+		"documents/company.txt",
+		"company",
+		embeddingService,
+		vectorRepository,
 	)
 
-		if err != nil {
-			log.Fatalf(
-				"Failed to save chunk %d: %v",
-				i+1,
-				err,
-			)
-		}
+	if err != nil {
+		log.Fatal(err)
+	}
 
-		log.Printf(
-			"Chunk %d berhasil disimpan ke Qdrant",
-			i+1,
-		)
+	err = rag.IndexDocument(
+		ctx,
+		"documents/profile_agung.txt",
+		"profile_agung",
+		embeddingService,
+		vectorRepository,
+	)
+
+	if err != nil {
+		log.Fatal(err)
 	}
 
 	// 9. Buat RAG Service

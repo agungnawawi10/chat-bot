@@ -3,7 +3,7 @@ package repository
 import (
 	"context"
 	"fmt"
-
+	"github.com/google/uuid"
 	"github.com/qdrant/go-client/qdrant"
 )
 
@@ -14,16 +14,16 @@ type VectorRepository struct {
 }
 
 type VectorRepositoryConfig struct {
-	Host     string
-	Port     int
+	Host       string
+	Port       int
 	Collection string
 }
 
 func NewVectorRepository(config *VectorRepositoryConfig) (*VectorRepository, error) {
 	if config == nil {
 		config = &VectorRepositoryConfig{
-			Host:     "localhost",
-			Port:     6334,
+			Host:       "localhost",
+			Port:       6334,
 			Collection: "documents",
 		}
 	}
@@ -59,7 +59,7 @@ func (r *VectorRepository) SaveChunk(
 			CollectionName: r.Collection,
 			Points: []*qdrant.PointStruct{
 				{
-					Id: qdrant.NewIDNum(uint64(chunkIndex)),
+					Id: qdrant.NewID(uuid.New().String()),
 					Vectors: qdrant.NewVectors(
 						embedding...,
 					),
