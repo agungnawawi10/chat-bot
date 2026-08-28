@@ -44,6 +44,48 @@ func NewVectorRepository(config *VectorRepositoryConfig) (*VectorRepository, err
 	}, nil
 }
 
+// func (r *VectorRepository) SaveChunk(
+// 	ctx context.Context,
+// 	id string,
+// 	content string,
+// 	embedding []float32,
+// 	documentName string,
+// 	chunkIndex int,
+// ) error {
+
+// 	_, err := r.Client.Upsert(
+// 		ctx,
+// 		&qdrant.UpsertPoints{
+// 			CollectionName: r.Collection,
+// 			Points: []*qdrant.PointStruct{
+// 				{
+// 					Id: qdrant.NewID(uuid.New().String()),
+// 					Vectors: qdrant.NewVectors(
+// 						embedding...,
+// 					),
+// 					Payload: qdrant.NewValueMap(
+// 						map[string]any{
+// 							"id":            id,
+// 							"content":       content,
+// 							"document_name": documentName,
+// 							"chunk_index":   chunkIndex,
+// 						},
+// 					),
+// 				},
+// 			},
+// 		},
+// 	)
+
+// 	if err != nil {
+// 		return fmt.Errorf(
+// 			"failed to save chunk to qdrant: %w",
+// 			err,
+// 		)
+// 	}
+
+// 	return nil
+// }
+
 func (r *VectorRepository) SaveChunk(
 	ctx context.Context,
 	id string,
@@ -53,13 +95,18 @@ func (r *VectorRepository) SaveChunk(
 	chunkIndex int,
 ) error {
 
+	pointID := uuid.NewSHA1(
+		uuid.NameSpaceURL,
+		[]byte(fmt.Sprintf("%s-chunk-%d", documentName, chunkIndex)),
+	)
+
 	_, err := r.Client.Upsert(
 		ctx,
 		&qdrant.UpsertPoints{
 			CollectionName: r.Collection,
 			Points: []*qdrant.PointStruct{
 				{
-					Id: qdrant.NewID(uuid.New().String()),
+					Id: qdrant.NewID(pointID.String()),
 					Vectors: qdrant.NewVectors(
 						embedding...,
 					),

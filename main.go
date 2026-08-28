@@ -5,7 +5,7 @@ import (
 	// "fmt"
 	"log"
 	"net/http"
-	// "os"
+	"os"
 	// "fmt"
 
 	"chat-bot/database"
@@ -29,13 +29,13 @@ func main() {
 
 	// 2. Cek API key
 
-	// apiKey := os.Getenv("GEMINI_API_KEY")
+	apiKey := os.Getenv("GEMINI_API_KEY")
 
-	// if apiKey == "" {
-	// 	log.Fatal("GEMINI_API_KEY tidak ditemukan")
-	// }
+	if apiKey == "" {
+		log.Fatal("GEMINI_API_KEY tidak ditemukan")
+	}
 
-	// log.Println("API key berhasil dibaca")
+	log.Println("API key berhasil dibaca")
 
 	// 3. Connect database
 
@@ -63,14 +63,14 @@ func main() {
 
 	// 4. Buat services
 
-	geminiService := service.NewMockGeminiService()
+	// geminiService := service.NewMockGeminiService()
 
-	// geminiService := service.NewGeminiService()
+	geminiService := service.NewGeminiService()
 
 	embeddingService := service.NewEmbeddingService()
 
-	// Load Document
-
+	// Load Documents
+	
 	ctx := context.Background()
 
 	err = rag.IndexDocument(

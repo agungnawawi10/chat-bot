@@ -10,22 +10,20 @@ import (
 )
 
 type RAGService struct {
-	EmbeddingService *EmbeddingService
+	EmbeddingService EmbeddingServiceInterface
 	VectorRepository repository.VectorRepositoryInterface
-	GeminiService    LLMService
-	// GeminiService    *GeminiService
+	GeminiService    GeminiService
 }
 
 func NewRAGService(
-	embeddingService *EmbeddingService,
+	embeddingService EmbeddingServiceInterface,
 	vectorRepository repository.VectorRepositoryInterface,
-	geminiService LLMService,
-	// geminiService *GeminiServic
+	geminiService *GeminiService,
 ) *RAGService {
 	return &RAGService{
 		EmbeddingService: embeddingService,
 		VectorRepository: vectorRepository,
-		GeminiService:    geminiService,
+		GeminiService:    *geminiService,
 	}
 }
 
@@ -34,7 +32,6 @@ func (s *RAGService) GenerateAnswer(
 	question string,
 ) (string, error) {
 
-	// 1. Buat embedding dari pertanyaan
 	queryEmbedding, err := s.EmbeddingService.GenerateEmbedding(question)
 
 	if err != nil {
@@ -44,12 +41,26 @@ func (s *RAGService) GenerateAnswer(
 		)
 	}
 
-	// 2. Cari chunk yang paling relevan di Qdrant
 	results, err := s.VectorRepository.SearchSimilar(
 		ctx,
 		queryEmbedding,
 		3,
 	)
+
+	fmt.Println("\n=== RETRIEVAL DEBUG ===")
+
+	for i, result := range results {
+		fmt.Printf("\nResult %d\n", i+1)
+		fmt.Println("Score:", result.Score)
+
+		if result.Payload != nil {
+			fmt.Println("Document:", result.Payload["document_name"])
+			fmt.Println("Chunk Index:", result.Payload["chunk_index"])
+			fmt.Println("Content:", result.Payload["content"])
+		}
+	}
+
+	fmt.Println("=== END RETRIEVAL DEBUG ===")
 
 	if err != nil {
 		return "", fmt.Errorf(
@@ -58,7 +69,6 @@ func (s *RAGService) GenerateAnswer(
 		)
 	}
 
-	// 3. Buat context dari hasil pencarian
 	var contextParts []string
 
 	for _, result := range results {
@@ -96,7 +106,6 @@ func (s *RAGService) GenerateAnswer(
 		"\n\n",
 	)
 
-	// 4. Buat prompt untuk Gemini
 	prompt := fmt.Sprintf(`
 You are a RAG question-answering assistant.
 
@@ -124,8 +133,6 @@ QUESTION:
 
 ANSWER:
 `, contextText, question)
-
-	// 5. Kirim context + question ke Gemini
 
 	fmt.Println("\n=== CONTEXT SENT TO GEMINI ===")
 	fmt.Println(contextText)

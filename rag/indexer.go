@@ -13,7 +13,7 @@ func IndexDocument(
 	ctx context.Context,
 	filePath string,
 	documentName string,
-	embeddingService *service.EmbeddingService,
+	embeddingService service.EmbeddingServiceInterface,
 	vectorRepository *repository.VectorRepository,
 ) error {
 
