@@ -39,10 +39,28 @@ func main() {
 	chatRepository := repository.NewChatRepository(db)
 
 	vectorRepositoryConfig := &repository.VectorRepositoryConfig{
-		Host:       "localhost",
+		Host:       os.Getenv("QDRANT_HOST"),
 		Port:       6334,
-		Collection: "documents",
+		Collection: os.Getenv("QDRANT_COLLECTION"),
 	}
+
+	if vectorRepositoryConfig.Host == "" {
+		vectorRepositoryConfig.Host = "localhost"
+	}
+
+	if vectorRepositoryConfig.Collection == "" {
+		vectorRepositoryConfig.Collection = "documents"
+	}
+
+	port := os.Getenv("SERVER_PORT")
+	if port == "" {
+		port = "8080"
+	}
+
+	log.Println("Config loaded:")
+	log.Println("  QDRANT_HOST:", vectorRepositoryConfig.Host)
+	log.Println("  QDRANT_COLLECTION:", vectorRepositoryConfig.Collection)
+	log.Println("  SERVER_PORT:", port)
 
 	vectorRepository, err := repository.NewVectorRepository(vectorRepositoryConfig)
 	if err != nil {
@@ -78,6 +96,6 @@ func main() {
 	http.HandleFunc("/conversations", chatHandler.GetConversations)
 	http.HandleFunc("/conversations/", chatHandler.ConversationRouter)
 
-	log.Println("Server running on http://localhost:8080")
-	log.Fatal(http.ListenAndServe(":8080", nil))
+	log.Println("Server running on http://localhost:" + port)
+	log.Fatal(http.ListenAndServe(":"+port, nil))
 }
