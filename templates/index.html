@@ -1,23 +1,35 @@
 <!DOCTYPE html>
 <html lang="id">
+
 <head>
     <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Go Chatbot</title>
     <!-- Tailwind CSS CDN -->
     <script src="https://cdn.tailwindcss.com"></script>
 </head>
-<body class="bg-gray-100 h-screen flex flex-col justify-between">
-    <div class="p-4 bg-blue-600 text-white font-bold text-center">Go Simple Chatbot</div>
 
-    <!-- Area Pesan -->
-    <div id="chat-box" class="flex-1 p-4 overflow-y-auto space-y-3">
-        <div class="bg-white p-3 rounded-lg shadow w-fit">Halo! Ada yang bisa saya bantu?</div>
+<body class="bg-gray-100 h-[100dvh] flex flex-col justify-between max-w-2xl mx-auto shadow-lg">
+    <!-- Header -->
+    <div class="p-3 sm:p-4 bg-blue-600 text-white font-bold text-center text-sm sm:text-base shadow-md">
+        Go Simple Chatbot
     </div>
 
-    <!-- Input Form -->
-    <div class="p-4 bg-white border-t flex gap-2">
-        <input type="text" id="user-input" placeholder="Ketik pesan..." class="flex-1 border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500">
-        <button onclick="sendMessage()" class="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700">Kirim</button>
+    <!-- Area Pesan (Responsive Scrolling) -->
+    <div id="chat-box" class="flex-1 p-3 sm:p-4 overflow-y-auto space-y-3 text-sm sm:text-base">
+        <div class="bg-white p-3 rounded-lg shadow max-w-[85%] sm:max-w-[75%] w-fit">
+            Halo! Ada yang bisa saya bantu?
+        </div>
+    </div>
+
+    <!-- Input Form (Sticky/Fixed di bawah saat mobile) -->
+    <div class="p-3 sm:p-4 bg-white border-t flex gap-2 items-center">
+        <input type="text" id="user-input" placeholder="Ketik pesan..."
+            class="flex-1 border rounded-lg px-3 py-2 text-sm sm:text-base focus:outline-none focus:ring-2 focus:ring-blue-500">
+        <button onclick="sendMessage()"
+            class="bg-blue-600 text-white px-4 py-2 rounded-lg text-sm sm:text-base hover:bg-blue-700 transition">
+            Kirim
+        </button>
     </div>
 
     <script>
@@ -26,23 +38,36 @@
             const chatBox = document.getElementById('chat-box');
             if (!input.value.trim()) return;
 
-            // Tampilkan pesan user
-            chatBox.innerHTML += `<div class="bg-blue-100 p-3 rounded-lg shadow w-fit ml-auto">${input.value}</div>`;
             let message = input.value;
+
+            // Tampilkan pesan user (Batasi lebar bubble chat max 85% agar tidak memenuhi layar)
+            chatBox.innerHTML += `<div class="bg-blue-100 p-3 rounded-lg shadow max-w-[85%] sm:max-w-[75%] w-fit ml-auto break-words">${escapeHtml(message)}</div>`;
             input.value = '';
-
-            // Kirim ke backend Go
-            let response = await fetch('/api/chat', {
-                method: 'POST',
-                headers: {'Content-Type': 'application/json'},
-                body: JSON.stringify({message: message})
-            });
-            let data = await response.json();
-
-            // Tampilkan balasan bot
-            chatBox.innerHTML += `<div class="bg-white p-3 rounded-lg shadow w-fit">${data.answer}</div>`;
             chatBox.scrollTop = chatBox.scrollHeight;
+
+            try {
+                // Kirim ke backend Go
+                let response = await fetch('/api/chat', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ message: message })
+                });
+                let data = await response.json();
+
+                // Tampilkan balasan bot
+                chatBox.innerHTML += `<div class="bg-white p-3 rounded-lg shadow max-w-[85%] sm:max-w-[75%] w-fit break-words">${escapeHtml(data.answer)}</div>`;
+                chatBox.scrollTop = chatBox.scrollHeight;
+            } catch (error) {
+                chatBox.innerHTML += `<div class="bg-red-100 text-red-600 p-3 rounded-lg shadow max-w-[85%] w-fit">Gagal terhubung ke server.</div>`;
+                chatBox.scrollTop = chatBox.scrollHeight;
+            }
+        }
+
+        // Helper sederhana untuk mencegah XSS injection dari teks user
+        function escapeHtml(text) {
+            return text.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
         }
     </script>
 </body>
+
 </html>
