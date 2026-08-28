@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <title>Go Chatbot</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-100 h-screen flex flex-col justify-between">
+    <div class="p-4 bg-blue-600 text-white font-bold text-center">Go Simple Chatbot</div>
+
+    <!-- Area Pesan -->
+    <div id="chat-box" class="flex-1 p-4 overflow-y-auto space-y-3">
+        <div class="bg-white p-3 rounded-lg shadow w-fit">Halo! Ada yang bisa saya bantu?</div>
+    </div>
+
+    <!-- Input Form -->
+    <div class="p-4 bg-white border-t flex gap-2">
+        <input type="text" id="user-input" placeholder="Ketik pesan..." class="flex-1 border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500">
+        <button onclick="sendMessage()" class="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700">Kirim</button>
+    </div>
+
+    <script>
+        async function sendMessage() {
+            const input = document.getElementById('user-input');
+            const chatBox = document.getElementById('chat-box');
+            if (!input.value.trim()) return;
+
+            // Tampilkan pesan user
+            chatBox.innerHTML += `<div class="bg-blue-100 p-3 rounded-lg shadow w-fit ml-auto">${input.value}</div>`;
+            let message = input.value;
+            input.value = '';
+
+            // Kirim ke backend Go
+            let response = await fetch('/api/chat', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({message: message})
+            });
+            let data = await response.json();
+
+            // Tampilkan balasan bot
+            chatBox.innerHTML += `<div class="bg-white p-3 rounded-lg shadow w-fit">${data.answer}</div>`;
+            chatBox.scrollTop = chatBox.scrollHeight;
+        }
+    </script>
+</body>
+</html>

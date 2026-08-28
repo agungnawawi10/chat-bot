@@ -2,11 +2,10 @@ package main
 
 import (
 	"context"
-	// "fmt"
+	"html/template"
 	"log"
 	"net/http"
 	"os"
-	// "fmt"
 
 	"chat-bot/database"
 	"chat-bot/handler"
@@ -17,27 +16,20 @@ import (
 	"github.com/joho/godotenv"
 )
 
+var tmpl *template.Template
+
 func main() {
-
-	// 1. Load .env
-
 	err := godotenv.Load()
-
 	if err != nil {
 		log.Fatal("Error loading .env file")
 	}
 
-	// 2. Cek API key
-
 	apiKey := os.Getenv("GEMINI_API_KEY")
-
 	if apiKey == "" {
 		log.Fatal("GEMINI_API_KEY tidak ditemukan")
 	}
 
 	log.Println("API key berhasil dibaca")
-
-	// 3. Connect database
 
 	db := database.Connect()
 	defer db.Close()
@@ -53,92 +45,39 @@ func main() {
 	}
 
 	vectorRepository, err := repository.NewVectorRepository(vectorRepositoryConfig)
-
 	if err != nil {
-		log.Fatal(
-			"Failed to connect to Qdrant:",
-			err,
-		)
+		log.Fatal("Failed to connect to Qdrant:", err)
 	}
-
-	// 4. Buat services
-
-	// geminiService := service.NewMockGeminiService()
 
 	geminiService := service.NewGeminiService()
-
 	embeddingService := service.NewEmbeddingService()
 
-	// Load Documents
-	
 	ctx := context.Background()
 
-	err = rag.IndexDocument(
-		ctx,
-		"documents/company.txt",
-		"company",
-		embeddingService,
-		vectorRepository,
-	)
-
+	err = rag.IndexDocument(ctx, "documents/company.txt", "company", embeddingService, vectorRepository)
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	err = rag.IndexDocument(
-		ctx,
-		"documents/profile_agung.txt",
-		"profile_agung",
-		embeddingService,
-		vectorRepository,
-	)
-
+	err = rag.IndexDocument(ctx, "documents/profile_agung.txt", "profile_agung", embeddingService, vectorRepository)
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	// 9. Buat RAG Service
+	ragService := service.NewRAGService(embeddingService, vectorRepository, geminiService)
 
-	ragService := service.NewRAGService(
-		embeddingService,
-		vectorRepository,
-		geminiService,
-	)
+	chatHandler := handler.NewChatHandler(geminiService, ragService, chatRepository)
 
-	// 10. Buat Chat Handler
+	tmpl = template.Must(template.ParseFiles("templates/index.html"))
 
-	chatHandler := handler.NewChatHandler(
-		geminiService,
-		ragService,
-		chatRepository,
-	)
+	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
+		tmpl.Execute(w, nil)
+	})
 
-	// 11. Register routes
+	http.HandleFunc("/api/chat", chatHandler.Chat)
+	http.HandleFunc("/conversations", chatHandler.GetConversations)
+	http.HandleFunc("/conversations/", chatHandler.ConversationRouter)
 
-	http.HandleFunc(
-		"/chat",
-		chatHandler.Chat,
-	)
-
-	http.HandleFunc(
-		"/conversations",
-		chatHandler.GetConversations,
-	)
-
-	http.HandleFunc(
-		"/conversations/",
-		chatHandler.ConversationRouter,
-	)
-	// 12. Start server
-
-	log.Println(
-		"Server running on http://localhost:8080",
-	)
-
-	log.Fatal(
-		http.ListenAndServe(
-			":8080",
-			nil,
-		),
-	)
+	log.Println("Server running on http://localhost:8080")
+	log.Fatal(http.ListenAndServe(":8080", nil))
 }
