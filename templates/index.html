@@ -33,6 +33,41 @@
     </div>
 
     <script>
+        let conversationId = localStorage.getItem('conversation_id') || null;
+
+        async function loadHistory() {
+            if (!conversationId) return;
+
+            try {
+                let response = await fetch(`/conversations/${conversationId}/messages`);
+                if (!response.ok) {
+                    conversationId = null;
+                    localStorage.removeItem('conversation_id');
+                    return;
+                }
+                let messages = await response.json();
+
+                const chatBox = document.getElementById('chat-box');
+                chatBox.innerHTML = '';
+
+                messages.forEach(msg => {
+                    let role = msg.role;
+                    let content = msg.parts[0].text;
+                    if (role === 'user') {
+                        chatBox.innerHTML += `<div class="bg-blue-100 p-3 rounded-lg shadow max-w-[85%] sm:max-w-[75%] w-fit ml-auto break-words">${escapeHtml(content)}</div>`;
+                    } else {
+                        chatBox.innerHTML += `<div class="bg-white p-3 rounded-lg shadow max-w-[85%] sm:max-w-[75%] w-fit break-words">${escapeHtml(content)}</div>`;
+                    }
+                });
+                const chatBoxElem = document.getElementById('chat-box');
+                chatBoxElem.scrollTop = chatBoxElem.scrollHeight;
+            } catch (error) {
+                console.error('Failed to load history:', error);
+                conversationId = null;
+                localStorage.removeItem('conversation_id');
+            }
+        }
+
         async function sendMessage() {
             const input = document.getElementById('user-input');
             const chatBox = document.getElementById('chat-box');
@@ -40,21 +75,27 @@
 
             let message = input.value;
 
-            // Tampilkan pesan user (Batasi lebar bubble chat max 85% agar tidak memenuhi layar)
             chatBox.innerHTML += `<div class="bg-blue-100 p-3 rounded-lg shadow max-w-[85%] sm:max-w-[75%] w-fit ml-auto break-words">${escapeHtml(message)}</div>`;
             input.value = '';
             chatBox.scrollTop = chatBox.scrollHeight;
 
             try {
-                // Kirim ke backend Go
+                let payload = { message: message };
+                if (conversationId) {
+                    payload.conversation_id = conversationId;
+                }
                 let response = await fetch('/api/chat', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ message: message })
+                    body: JSON.stringify(payload)
                 });
                 let data = await response.json();
 
-                // Tampilkan balasan bot
+                if (!conversationId) {
+                    conversationId = data.conversation_id;
+                    localStorage.setItem('conversation_id', conversationId);
+                }
+
                 chatBox.innerHTML += `<div class="bg-white p-3 rounded-lg shadow max-w-[85%] sm:max-w-[75%] w-fit break-words">${escapeHtml(data.answer)}</div>`;
                 chatBox.scrollTop = chatBox.scrollHeight;
             } catch (error) {
@@ -63,10 +104,11 @@
             }
         }
 
-        // Helper sederhana untuk mencegah XSS injection dari teks user
         function escapeHtml(text) {
             return text.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
         }
+
+        window.onload = loadHistory;
     </script>
 </body>
 
