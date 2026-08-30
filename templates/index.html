@@ -11,7 +11,7 @@
 
 <body class="bg-gray-100 h-[100dvh] flex flex-col justify-between max-w-2xl mx-auto shadow-lg">
     <!-- Header -->
-    <div class="p-3 sm:p-4 bg-blue-600 text-white font-bold text-center text-sm sm:text-base shadow-md">
+    <div class="p-3 sm:p-4 bg-red-600 text-white font-bold text-center text-sm sm:text-base shadow-md">
         Go Simple Chatbot
     </div>
 
@@ -25,9 +25,9 @@
     <!-- Input Form (Sticky/Fixed di bawah saat mobile) -->
     <div class="p-3 sm:p-4 bg-white border-t flex gap-2 items-center">
         <input type="text" id="user-input" placeholder="Ketik pesan..."
-            class="flex-1 border rounded-lg px-3 py-2 text-sm sm:text-base focus:outline-none focus:ring-2 focus:ring-blue-500">
+            class="flex-1 border rounded-lg px-3 py-2 text-sm sm:text-base focus:outline-none focus:ring-2 focus:ring-red-500">
         <button onclick="sendMessage()"
-            class="bg-blue-600 text-white px-4 py-2 rounded-lg text-sm sm:text-base hover:bg-blue-700 transition">
+            class="bg-red-600 text-white px-4 py-2 rounded-lg text-sm sm:text-base hover:bg-red-700 transition">
             Kirim
         </button>
     </div>
@@ -54,7 +54,7 @@
                     let role = msg.role;
                     let content = msg.parts[0].text;
                     if (role === 'user') {
-                        chatBox.innerHTML += `<div class="bg-blue-100 p-3 rounded-lg shadow max-w-[85%] sm:max-w-[75%] w-fit ml-auto break-words">${escapeHtml(content)}</div>`;
+                        chatBox.innerHTML += `<div class="bg-red-100 p-3 rounded-lg shadow max-w-[85%] sm:max-w-[75%] w-fit ml-auto break-words">${escapeHtml(content)}</div>`;
                     } else {
                         chatBox.innerHTML += `<div class="bg-white p-3 rounded-lg shadow max-w-[85%] sm:max-w-[75%] w-fit break-words">${escapeHtml(content)}</div>`;
                     }
@@ -75,7 +75,7 @@
 
             let message = input.value;
 
-            chatBox.innerHTML += `<div class="bg-blue-100 p-3 rounded-lg shadow max-w-[85%] sm:max-w-[75%] w-fit ml-auto break-words">${escapeHtml(message)}</div>`;
+            chatBox.innerHTML += `<div class="bg-red-100 p-3 rounded-lg shadow max-w-[85%] sm:max-w-[75%] w-fit ml-auto break-words">${escapeHtml(message)}</div>`;
             input.value = '';
             chatBox.scrollTop = chatBox.scrollHeight;
 
